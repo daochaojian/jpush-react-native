@@ -8,10 +8,13 @@ import {
 import headlessJsTask from './headlessTask';
 
 const JPushModule = NativeModules.JPushModule;
+const JMessageModule = NativeModules.JMessageModule;
 const HEADLESS_TASK = "headlessJsTask";
 const listeners = {};
 const receiveCustomMsgEvent = "receivePushMsg";
 const receiveNotificationEvent = "receiveNotification";
+const receiveMessageEvent = "receiveMessage";
+const notificationClickEvent = "notificationClick";
 const openNotificationEvent = "openNotification";
 const getRegistrationIdEvent = "getRegistrationId";
 
@@ -54,6 +57,55 @@ export default class JPush {
 		JPushModule.initPush();
 	}
 
+	/**@JMessage
+	 * 初始化JMessage 必须先初始化才能执行其他操作
+	 */
+	static initMessage() {
+		JMessageModule.initMessage();
+	}
+	/**JMessage
+	 * 注册
+	 * @return {[type]} [description]
+	 */
+	static register(name, password) {
+		return JMessageModule.register(name, password)
+			.then(m => Promise.resolve(m))
+			.catch(e => Promise.reject(e));
+	}
+	/**JMessage
+	 * 登录
+	 * @return {[type]} [description]
+	 */
+	static login(name, password) {
+		return JMessageModule.login(name, password)
+		.then(m => Promise.resolve('login success'))
+		.catch(e => Promise.reject(e));
+	}
+
+	/**JMessage
+	 * 退出登录
+	 *
+	 */
+	static logout() {
+		JMessageModule.logout();
+	}
+	/**JMessage
+	 * 退出登录
+	 *
+	 */
+	static isLogIn() {
+	 	return JMessageModule.isLogIn();
+	}
+
+	/**JMessage
+	 * 发送信息
+	 *
+	 */
+	static sendSingleMessage(username, type, data) {
+		return JMessageModule.sendSingleMessage(username, type, data)
+		.then(m => Promise.resolve(m))
+		.catch(e => Promise.reject(e));
+	}
 	/**
 	 * Android
 	 */
@@ -153,7 +205,7 @@ export default class JPush {
 		listeners[cb] = null;
 	}
 
-	/**
+	/**JMssage
 	 * Android
 	 */
 	static addReceiveNotificationListener(cb) {
@@ -167,6 +219,46 @@ export default class JPush {
 	 * Android
 	 */
 	static removeReceiveNotificationListener(cb) {
+		if (!listeners[cb]) {
+			return;
+		}
+		listeners[cb].remove();
+		listeners[cb] = null;
+	}
+
+	/**
+	 * Android
+	 */
+	static addReceiveMessageListener(cb) {
+		listeners[cb] = DeviceEventEmitter.addListener(receiveMessageEvent,
+			(map) => {
+				cb(map);
+			});
+	}
+
+	/**
+	 * Android
+	 */
+	static removeReceiveMessageListener(cb) {
+		if (!listeners[cb]) {
+			return;
+		}
+		listeners[cb].remove();
+		listeners[cb] = null;
+	}
+	/**
+	 * Android
+	 */
+	static addNotificationClickListener(cb) {
+		listeners[cb] = DeviceEventEmitter.addListener(notificationClickEvent,
+			(map) => {
+				cb(map);
+			});
+	}
+	/**
+	 * Android
+	 */
+	static removeNotificationClickListener(cb) {
 		if (!listeners[cb]) {
 			return;
 		}
@@ -215,7 +307,7 @@ export default class JPush {
 	}
 
 	/**
-	 * iOS,  Android	
+	 * iOS,  Android
 	 */
 	static getRegistrationID(cb) {
 		JPushModule.getRegistrationID((id) => {
@@ -256,6 +348,9 @@ export default class JPush {
 		});
 	}
 
+	static finishActivity() {
+		JPushModule.finishActivity();
+	}
 	//  add listener
 	// NativeAppEventEmitter.addListener('networkDidSetup', (token) => {
 	//
