@@ -1,9 +1,8 @@
+[![tag](https://img.shields.io/badge/tag-1.6.7-blue.svg)](https://github.com/jpush/jpush-react-native/releases)
 [![QQ Group](https://img.shields.io/badge/QQ%20Group-553406342-red.svg)]()
 # JPush React Native Plugin
 
 [English Document](https://github.com/jpush/jpush-react-native/blob/master/example/documents/ReadMeEn.md)
-
-## 有关于 JPush SDK 的疑问，请务必到我们的[社区提问](https://community.jiguang.cn/)
 
 ## NOTE:
 - for latest RN, use latest
@@ -75,7 +74,7 @@ dependencies {
 
 - [检查添加的配置项](https://github.com/jpush/jpush-react-native/blob/master/example/documents/Check.md)
 
-- [加入 JPushPackage](https://github.com/jpush/jpush-react-native/blob/master/example/documents/Android%20Usage.md)
+- [加入 JPushPackage，有参数！](https://github.com/jpush/jpush-react-native/blob/master/example/documents/Android%20Usage.md)
 
 
 ### API
@@ -85,9 +84,9 @@ dependencies {
 - [iOS API](https://github.com/jpush/jpush-react-native/blob/master/example/documents/iOS_API.md)
 
 ### 关于点击通知跳转到指定界面
-demo 增加了 [JPushModuleDemo](./example/android/app/src/com/pushdemo/JPushModuleDemo.java) 类（其中点击通知的地方做了一下跳转），
-可以在应用处于前台，后台或者为启动状态时，点击通知跳转到指定界面（SecondActivity）。
-对应的 JS 文件为 [second.js](./example/react-native-android/second.js)，详情可以参考这两个文件。
+- Android
+
+  v1.6.7 新增 API `jumpToPushActivity`，使用参考 [demo](./example/react-native-android/push_activity.js#L113) 
 
 
 ### [关于更新 RN](https://github.com/jpush/jpush-react-native/blob/master/example/documents/Update%20React%20Native.md)
