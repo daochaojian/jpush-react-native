@@ -85,6 +85,18 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name="cn.jpush.im.android.helpers.IMReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter android:priority="1000">
+                <action android:name="cn.jpush.im.android.action.IM_RESPONSE" />
+                <action android:name="cn.jpush.im.android.action.NOTIFICATION_CLICK_PROXY" />
+
+                <category android:name="${applicationId}" />
+            </intent-filter>
+        </receiver>
+
         <service android:name=".HeadlessService"
             android:enabled="true">
             <intent-filter>

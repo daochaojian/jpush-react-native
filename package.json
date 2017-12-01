@@ -1,44 +1,113 @@
 {
-	"name": "jpush-react-native",
-	"version": "1.6.7",
-	"description": "a jpush plugin for react native application",
-	"main": "index.js",
-	"scripts": {
-		"postinstall": "node postInstall.js"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git@github.com:jpush/jpush-react-native.git"
-	},
-	"keywords": [
-		"react",
-		"native",
-		"jpush"
-	],
-	"author": "KenChoi, huminiOS",
-	"license": "ISC",
-	"bugs": {
-		"url": "https://github.com/jpush/jpush-react-native/issues"
-	},
-	"homepage": "https://github.com/jpush/jpush-react-native#readme",
-	"peerDependencies": {
-		"jcore-react-native": ">= 1.0.0"
-	},
-	"rnpm": {
-		"ios": {
-			"sharedLibraries": [
-				"libz",
-				"UserNotifications",
-				"CoreTelephony",
-				"Security",
-				"CFNetwork",
-				"CoreFoundation",
-				"SystemConfiguration",
-				"Foundation",
-				"UIKit",
-				"libresolv",
-				"CoreGraphics"
-			]
-		}
-	}
+  "_args": [
+    [
+      {
+        "raw": "jpush-react-native",
+        "scope": null,
+        "escapedName": "jpush-react-native",
+        "name": "jpush-react-native",
+        "rawSpec": "",
+        "spec": "latest",
+        "type": "tag"
+      },
+      "/Users/dao/IdeaProjects/yunnong/corps-app-user-version"
+    ]
+  ],
+  "_from": "jpush-react-native@latest",
+  "_id": "jpush-react-native@1.6.6",
+  "_inCache": true,
+  "_location": "/jpush-react-native",
+  "_nodeVersion": "7.4.0",
+  "_npmOperationalInternal": {
+    "host": "packages-12-west.internal.npmjs.com",
+    "tmp": "tmp/jpush-react-native-1.6.6.tgz_1495090097510_0.3419034976977855"
+  },
+  "_npmUser": {
+    "name": "kenchoi",
+    "email": "caiyg@jpush.cn"
+  },
+  "_npmVersion": "4.0.5",
+  "_phantomChildren": {},
+  "_requested": {
+    "raw": "jpush-react-native",
+    "scope": null,
+    "escapedName": "jpush-react-native",
+    "name": "jpush-react-native",
+    "rawSpec": "",
+    "spec": "latest",
+    "type": "tag"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/jpush-react-native/-/jpush-react-native-1.6.6.tgz",
+  "_shasum": "b81317f59e4f9f529991afe01df93b1b51b06647",
+  "_shrinkwrap": null,
+  "_spec": "jpush-react-native",
+  "_where": "/Users/dao/IdeaProjects/yunnong/corps-app-user-version",
+  "author": {
+    "name": "KenChoi, huminiOS"
+  },
+  "bugs": {
+    "url": "https://github.com/jpush/jpush-react-native/issues"
+  },
+  "dependencies": {},
+  "description": "a jpush plugin for react native application",
+  "devDependencies": {},
+  "directories": {},
+  "dist": {
+    "shasum": "b81317f59e4f9f529991afe01df93b1b51b06647",
+    "tarball": "https://registry.npmjs.org/jpush-react-native/-/jpush-react-native-1.6.6.tgz"
+  },
+  "gitHead": "ee7ba9a1d7d549bda9b6e6e3e10c7568b3039e7f",
+  "homepage": "https://github.com/jpush/jpush-react-native#readme",
+  "keywords": [
+    "react",
+    "native",
+    "jpush"
+  ],
+  "license": "ISC",
+  "main": "index.js",
+  "maintainers": [
+    {
+      "name": "jpush",
+      "email": "support@jpush.cn"
+    },
+    {
+      "name": "kenchoi",
+      "email": "caiyg@jpush.cn"
+    }
+  ],
+  "name": "jpush-react-native",
+  "optionalDependencies": {},
+  "peerDependencies": {
+    "jcore-react-native": ">= 1.0.0"
+  },
+  "readme": "ERROR: No README data found!",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/jpush/jpush-react-native.git"
+  },
+  "rnpm": {
+    "ios": {
+      "sharedLibraries": [
+        "libz",
+        "UserNotifications",
+        "CoreTelephony",
+        "Security",
+        "CFNetwork",
+        "CoreFoundation",
+        "SystemConfiguration",
+        "Foundation",
+        "UIKit",
+        "libresolv",
+        "CoreGraphics"
+      ]
+    }
+  },
+  "scripts": {
+    "postinstall": "node postInstall.js"
+  },
+  "version": "1.6.6"
 }

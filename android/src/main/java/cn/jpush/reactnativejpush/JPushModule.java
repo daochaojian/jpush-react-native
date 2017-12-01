@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
@@ -18,7 +19,6 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
-import com.facebook.react.uimanager.annotations.ReactProp;
 
 
 import java.util.LinkedHashSet;
@@ -29,6 +29,18 @@ import cn.jpush.android.api.BasicPushNotificationBuilder;
 import cn.jpush.android.api.CustomPushNotificationBuilder;
 import cn.jpush.android.api.JPushInterface;
 import cn.jpush.android.api.TagAliasCallback;
+import cn.jpush.im.android.api.JMessageClient;
+import cn.jpush.im.android.api.content.ImageContent;
+import cn.jpush.im.android.api.content.MessageContent;
+import cn.jpush.im.android.api.content.TextContent;
+import cn.jpush.im.android.api.enums.ContentType;
+import cn.jpush.im.android.api.enums.ConversationType;
+import cn.jpush.im.android.api.event.MessageEvent;
+import cn.jpush.im.android.api.model.Conversation;
+import cn.jpush.im.android.api.model.GroupInfo;
+import cn.jpush.im.android.api.model.Message;
+import cn.jpush.im.android.api.model.UserInfo;
+import cn.jpush.im.api.BasicCallback;
 
 public class JPushModule extends ReactContextBaseJavaModule {
 
@@ -71,7 +83,7 @@ public class JPushModule extends ReactContextBaseJavaModule {
     public void initPush() {
         mContext = getCurrentActivity();
         JPushInterface.init(getReactApplicationContext());
-        Logger.toast(mContext, "Init push success");
+        // Logger.toast(mContext, "Init push success");
         Logger.i(TAG, "init Success!");
     }
 
@@ -108,41 +120,35 @@ public class JPushModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void notifyJSDidLoad(Callback callback) {
+    public void notifyJSDidLoad() {
         // send cached event
         if (getReactApplicationContext().hasActiveCatalystInstance()) {
             mRAC = getReactApplicationContext();
-            sendEvent();
-            callback.invoke(0);
-        }
-    }
-
-    private static void sendEvent() {
-        if (mEvent != null) {
-            Logger.i(TAG, "Sending event : " + mEvent);
-            switch (mEvent) {
-                case RECEIVE_CUSTOM_MESSAGE:
-                    WritableMap map = Arguments.createMap();
-                    map.putString("message", mCachedBundle.getString(JPushInterface.EXTRA_MESSAGE));
-                    map.putString("extras", mCachedBundle.getString(JPushInterface.EXTRA_EXTRA));
-                    mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                            .emit(mEvent, map);
-                    break;
-                case RECEIVE_REGISTRATION_ID:
-                    mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                            .emit(mEvent, mCachedBundle.getString(JPushInterface.EXTRA_REGISTRATION_ID));
-                    break;
-                case RECEIVE_NOTIFICATION:
-                case OPEN_NOTIFICATION:
-                    map = Arguments.createMap();
-                    map.putString("alertContent", mCachedBundle.getString(JPushInterface.EXTRA_ALERT));
-                    map.putString("extras", mCachedBundle.getString(JPushInterface.EXTRA_EXTRA));
-                    mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                            .emit(mEvent, map);
-                    break;
+            if (mEvent != null) {
+                switch (mEvent) {
+                    case RECEIVE_CUSTOM_MESSAGE:
+                        WritableMap map = Arguments.createMap();
+                        map.putString("message", mCachedBundle.getString(JPushInterface.EXTRA_MESSAGE));
+                        map.putString("extras", mCachedBundle.getString(JPushInterface.EXTRA_EXTRA));
+                        getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                                .emit(mEvent, map);
+                        break;
+                    case RECEIVE_REGISTRATION_ID:
+                        getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                                .emit(mEvent, mCachedBundle.getString(JPushInterface.EXTRA_REGISTRATION_ID));
+                        break;
+                    case RECEIVE_NOTIFICATION:
+                    case OPEN_NOTIFICATION:
+                        map = Arguments.createMap();
+                        map.putString("alertContent", mCachedBundle.getString(JPushInterface.EXTRA_ALERT));
+                        map.putString("extras", mCachedBundle.getString(JPushInterface.EXTRA_EXTRA));
+                        getReactApplicationContext().getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                                .emit(mEvent, map);
+                        break;
+                }
+                mEvent = null;
+                mCachedBundle = null;
             }
-            mEvent = null;
-            mCachedBundle = null;
         }
     }
 
@@ -448,10 +454,10 @@ public class JPushModule extends ReactContextBaseJavaModule {
      * @param id the notification id
      */
     @ReactMethod
-    public void clearNotificationById(int id) {
+    public void clearNotificationById(String id) {
         try {
             mContext = getCurrentActivity();
-            JPushInterface.clearNotificationById(mContext, id);
+            JPushInterface.clearNotificationById(mContext, Integer.parseInt(id));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -473,9 +479,14 @@ public class JPushModule extends ReactContextBaseJavaModule {
                 try {
                     String message = data.getStringExtra(JPushInterface.EXTRA_MESSAGE);
                     Logger.i(TAG, "收到自定义消息: " + message);
-                    mEvent = RECEIVE_CUSTOM_MESSAGE;
                     if (mRAC != null) {
-                        sendEvent();
+                        WritableMap map = Arguments.createMap();
+                        map.putString("message", message);
+                        map.putString("extras", data.getExtras().getString(JPushInterface.EXTRA_EXTRA));
+                        mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                                .emit(RECEIVE_CUSTOM_MESSAGE, map);
+                    } else {
+                        mEvent = RECEIVE_CUSTOM_MESSAGE;
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -487,9 +498,15 @@ public class JPushModule extends ReactContextBaseJavaModule {
                     // extra 字段的 json 字符串
                     String extras = mCachedBundle.getString(JPushInterface.EXTRA_EXTRA);
                     Logger.i(TAG, "收到推送下来的通知: " + alertContent);
-                    mEvent = RECEIVE_NOTIFICATION;
                     if (mRAC != null) {
-                        sendEvent();
+                        WritableMap map = Arguments.createMap();
+                        map.putString("alertContent", alertContent);
+                        map.putString("extras", extras);
+                        mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                                .emit(RECEIVE_NOTIFICATION, map);
+                    } else {
+                        //cache event
+                        mEvent = RECEIVE_NOTIFICATION;
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -501,20 +518,29 @@ public class JPushModule extends ReactContextBaseJavaModule {
                     String alertContent = mCachedBundle.getString(JPushInterface.EXTRA_ALERT);
                     // extra 字段的 json 字符串
                     String extras = mCachedBundle.getString(JPushInterface.EXTRA_EXTRA);
-                    Intent intent;
                     if (isApplicationRunningBackground(context)) {
-                        intent = new Intent();
-                        intent.setClassName(context.getPackageName(), context.getPackageName() + ".MainActivity");
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    } else {
-                        intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                      Intent intent = new Intent();
+                      intent.setClassName(context.getPackageName(), context.getPackageName() + ".MainActivity");
+                      intent.putExtras(mCachedBundle);
+                      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                      context.startActivity(intent);
+                      // Intent detailIntent = new Intent();
+                      // detailIntent.setClassName(context.getPackageName(), context.getPackageName() + ".ContactActivity");
+                      // detailIntent.putExtras(mCachedBundle);
+                      // detailIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                      // Intent[] intents = {intent, detailIntent};
+                      // Logger.toast(context, context.getPackageName());
+                      // context.startActivities(intents);
                     }
-                    intent.putExtras(mCachedBundle);
-                    context.startActivity(intent);
-                    mEvent = OPEN_NOTIFICATION;
                     if (mRAC != null) {
-                        sendEvent();
+                        WritableMap map = Arguments.createMap();
+                        map.putString("alertContent", alertContent);
+                        map.putString("extras", extras);
+                        mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                                .emit(OPEN_NOTIFICATION, map);
+                    } else {
+                        // cache event
+                        mEvent = OPEN_NOTIFICATION;
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -525,9 +551,11 @@ public class JPushModule extends ReactContextBaseJavaModule {
                 // to get registrationId in the first instance.
             } else if (JPushInterface.ACTION_REGISTRATION_ID.equals(data.getAction())) {
                 try {
-                    mEvent = RECEIVE_REGISTRATION_ID;
                     if (mRAC != null) {
-                        sendEvent();
+                        mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                                .emit(mEvent, mCachedBundle.getString(JPushInterface.EXTRA_REGISTRATION_ID));
+                    } else {
+                        mEvent = RECEIVE_REGISTRATION_ID;
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -548,29 +576,12 @@ public class JPushModule extends ReactContextBaseJavaModule {
         }
         return false;
     }
-
-    @ReactMethod
-    public void jumpToPushActivity(String activityName) {
-        Logger.d(TAG, "Jumping to " + activityName);
-        try {
-            Intent intent = new Intent();
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            intent.setClassName(mRAC, mRAC.getPackageName() + "." + activityName);
-            mRAC.startActivity(intent);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
     @ReactMethod
     public void finishActivity() {
-        try {
-            Activity activity = getCurrentActivity();
+        Activity activity = getCurrentActivity();
+        if (activity != null) {
             activity.finish();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-
     }
+
 }

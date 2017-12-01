@@ -21,6 +21,7 @@ public class JPushPackage implements ReactPackage {
     public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
         return Arrays.asList(new NativeModule[]{
                 new JPushModule(reactContext),
+                new JMessageModule(reactContext),
         });
     }
 

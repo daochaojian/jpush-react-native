@@ -1,8 +1,11 @@
 import {
+	AppRegistry,
 	NativeModules,
 	Platform,
 	DeviceEventEmitter
 } from 'react-native';
+
+import headlessJsTask from './headlessTask';
 
 const JPushModule = NativeModules.JPushModule;
 const JMessageModule = NativeModules.JMessageModule;
@@ -11,9 +14,13 @@ const listeners = {};
 const receiveCustomMsgEvent = "receivePushMsg";
 const receiveNotificationEvent = "receiveNotification";
 const receiveMessageEvent = "receiveMessage";
+const offlineMessageEvent = "offlineMessage";
 const notificationClickEvent = "notificationClick";
+const contactNotifyEvent = "contactNotify";
 const openNotificationEvent = "openNotification";
 const getRegistrationIdEvent = "getRegistrationId";
+
+AppRegistry.registerHeadlessTask(HEADLESS_TASK, () => headlessJsTask);
 
 /**
  * Logs message to console with the [JPush] prefix
@@ -93,11 +100,60 @@ export default class JPush {
 	}
 
 	/**JMessage
+	 * 获取会话列表
+	 *
+	 */
+	static getConversationList() {
+		return JMessageModule.getConversationList()
+			.then(m => Promise.resolve(m))
+			.catch(e => Promise.reject(e));
+	}
+	/**JMessage
+	 * 发送好友请求
+	 *
+	 */
+	static sendInvitation(username, appkey) {
+		return JMessageModule.sendInvitation(username, appkey)
+			.then(m => Promise.resolve(m))
+			.catch(e => Promise.reject(e));
+	}
+
+	/**JMessage
+	 * 接受好友请求
+	 *
+	 */
+	static acceptInvitation(username, appkey) {
+		return JMessageModule.acceptInvitation(username, appkey)
+		.then(m => Promise.resolve(m))
+		.catch(e => Promise.reject(e));
+	}
+
+	/**JMessage
+	 * 拒绝好友请求
+	 *
+	 */
+	static declineInvitation(username) {
+		return JMessageModule.declineInvitation(username)
+		.then(m => Promise.resolve(m))
+		.catch(e => Promise.reject(e));
+	}
+
+	/**JMessage
+	 * 获取好友列表
+	 *
+	 */
+	static getFriendList() {
+		return JMessageModule.getFriendList()
+		.then(m => Promise.resolve(m))
+		.catch(e => Promise.reject(e));
+	}
+
+	/**JMessage
 	 * 发送信息
 	 *
 	 */
-	static sendSingleMessage(username, type, data) {
-		return JMessageModule.sendSingleMessage(username, type, data)
+	static sendSingleMessage(username, appkey, type, data) {
+		return JMessageModule.sendSingleMessage(username, appkey, type, data)
 		.then(m => Promise.resolve(m))
 		.catch(e => Promise.reject(e));
 	}
@@ -115,10 +171,8 @@ export default class JPush {
 		JPushModule.resumePush();
 	}
 
-	static notifyJSDidLoad(cb) {
-		JPushModule.notifyJSDidLoad((resultCode) => {
-			cb(resultCode);
-		});
+	static notifyJSDidLoad() {
+		JPushModule.notifyJSDidLoad();
 	}
 
 	/**
@@ -184,20 +238,6 @@ export default class JPush {
 	/**
 	 * Android
 	 */
-	static jumpToPushActivity(activityName) {
-		JPushModule.jumpToPushActivity(activityName);
-	}
-
-	/**
-	 * Android
-	 */
-	static finishActivity() {
-		JPushModule.finishActivity();
-	}
-
-	/**
-	 * Android
-	 */
 	static addReceiveCustomMsgListener(cb) {
 		listeners[cb] = DeviceEventEmitter.addListener(receiveCustomMsgEvent,
 			(message) => {
@@ -237,6 +277,26 @@ export default class JPush {
 		listeners[cb] = null;
 	}
 
+	/**JMssage
+	 *
+	 */
+	static addContactNotifyListener(cb) {
+		listeners[cb] = DeviceEventEmitter.addListener(contactNotifyEvent,
+			(map) => {
+				cb(map);
+			});
+	}
+
+	/**JMssage
+	 *
+	 */
+	static removeContactNotifyListener(cb) {
+		if (!listeners[cb]) {
+			return;
+		}
+		listeners[cb].remove();
+		listeners[cb] = null;
+	}
 	/**
 	 * Android
 	 */
@@ -257,6 +317,27 @@ export default class JPush {
 		listeners[cb].remove();
 		listeners[cb] = null;
 	}
+	/**
+	 * Android
+	 */
+	static addOfflineMessageListener(cb) {
+		listeners[cb] = DeviceEventEmitter.addListener(offlineMessageEvent,
+			(map) => {
+				cb(map);
+			});
+	}
+
+	/**
+	 * Android
+	 */
+	static removeOfflineMessageListener(cb) {
+		if (!listeners[cb]) {
+			return;
+		}
+		listeners[cb].remove();
+		listeners[cb] = null;
+	}
+
 	/**
 	 * Android
 	 */

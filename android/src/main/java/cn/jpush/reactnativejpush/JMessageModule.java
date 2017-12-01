@@ -20,6 +20,7 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 
@@ -30,12 +31,16 @@ import java.util.List;
 import java.util.Set;
 
 import cn.jpush.im.android.api.JMessageClient;
+import cn.jpush.im.android.api.ContactManager;
+import cn.jpush.im.android.api.event.ContactNotifyEvent;
+import cn.jpush.im.android.api.callback.GetUserInfoListCallback;
 import cn.jpush.im.android.api.content.ImageContent;
 import cn.jpush.im.android.api.content.MessageContent;
 import cn.jpush.im.android.api.content.TextContent;
 import cn.jpush.im.android.api.enums.ContentType;
 import cn.jpush.im.android.api.enums.ConversationType;
 import cn.jpush.im.android.api.event.MessageEvent;
+import cn.jpush.im.android.api.event.OfflineMessageEvent;
 import cn.jpush.im.android.api.model.Conversation;
 import cn.jpush.im.android.api.event.NotificationClickEvent;
 import cn.jpush.im.android.api.model.GroupInfo;
@@ -53,7 +58,11 @@ public class JMessageModule extends ReactContextBaseJavaModule {
 
     private final static String RECEIVE_MESSAGE = "receiveMessage";
 
+    private final static String CONTACT_NOTIFY = "contactNotify";
+
     private final static String NOTIFICATION_CLICK = "notificationClick";
+
+    private final static String OFFLINE_MESSAGE = "offlineMessage";
 
     public JMessageModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -146,16 +155,156 @@ public class JMessageModule extends ReactContextBaseJavaModule {
         boolean isLogIn = info != null && info.getUserID() != 0;
         promise.resolve(isLogIn);
     }
+
+    /**
+     *获取会话列表
+     */
+    @ReactMethod
+    public void getConversationList(final Promise promise) {
+        List<Conversation> list = JMessageClient.getConversationList();
+        Logger.i(TAG, list.toString());
+        promise.resolve(transformConversationToWritableArray(list));
+    }
+
+    /**
+     *发送好友请求
+     */
+    @ReactMethod
+    public void sendInvitation(String userName, String appkey, final Promise promise) {
+        ContactManager.sendInvitationRequest(userName, appkey, "", new BasicCallback() {
+            @Override
+            public void gotResult(int responseCode, String responseMessage) {
+                if (0 == responseCode) {
+                    //好友请求请求发送成功
+                  promise.resolve("发送成功");
+                } else {
+                    //好友请求发送失败
+                  promise.reject(responseMessage);
+                }
+            }
+        });
+    }
+
+    /**
+     *同意好友请求
+     */
+    @ReactMethod
+    public void acceptInvitation(String userName, String appkey, final Promise promise) {
+      ContactManager.acceptInvitation(userName, appkey, new BasicCallback() {
+            @Override
+            public void gotResult(int responseCode, String responseMessage) {
+                if (0 == responseCode) {
+                  promise.resolve("同意好友");
+                } else {
+                    //好友请求发送失败
+                  promise.reject(responseMessage);
+                }
+            }
+        });
+      }
+
+    /**
+     *拒绝好友请求
+     */
+    @ReactMethod
+    public void declineInvitation(String userName, final Promise promise) {
+      ContactManager.declineInvitation(userName, "", "", new BasicCallback() {
+            @Override
+            public void gotResult(int responseCode, String responseMessage) {
+                if (0 == responseCode) {
+                  promise.resolve("拒绝好友");
+                } else {
+                  promise.reject(responseMessage);
+                }
+            }
+        });
+      }
+
+    /**
+     *好友列表
+     */
+    @ReactMethod
+    public void getFriendList(final Promise promise) {
+      ContactManager.getFriendList(new GetUserInfoListCallback() {
+            @Override
+            public void gotResult(int responseCode, String responseMessage, List<UserInfo> userInfoList) {
+                if (0 == responseCode) {
+                  //获取好友列表成功
+                  Logger.i(TAG, userInfoList.toString());
+                  promise.resolve(transformToWritableArray(userInfoList));
+                } else {
+                  //获取好友列表失败
+                  promise.reject(responseMessage);
+                }
+            }
+        });
+    }
+    /**
+    * 接收好友消息事件
+    * @param event
+    */
+   public void onEvent(ContactNotifyEvent event) {
+     String reason = event.getReason();
+     String fromUsername = event.getFromUsername();
+     String appkey = event.getfromUserAppKey();
+     WritableMap map = Arguments.createMap();
+     map.putString("fromUsername", fromUsername);
+     map.putString("reason", reason);
+     map.putString("appkey", appkey);
+     switch (event.getType()) {
+        case invite_received://收到好友邀请
+            map.putString("type", "invite_received");
+            break;
+        case invite_accepted://对方接收了你的好友邀请
+            map.putString("type", "invite_accepted");
+            break;
+        case invite_declined://对方拒绝了你的好友邀请
+            map.putString("type", "invite_declined");
+            break;
+        case contact_deleted://对方将你从好友中删除
+            map.putString("type", "contact_deleted");
+            break;
+        default:
+            break;
+    }
+     Logger.i(TAG, fromUsername);
+     mRAC = getReactApplicationContext();
+     if (mRAC != null) {
+        mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                 .emit(CONTACT_NOTIFY, map);
+     }
+   }
+
     /**
      * 接收消息事件
      * @param event
      */
     public void onEvent(MessageEvent event) {
       Message message = event.getMessage();
+      Logger.i(TAG, message.toString());
       mRAC = getReactApplicationContext();
       if (mRAC != null) {
           mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                  .emit(RECEIVE_MESSAGE, transformToWritableMap(message));
+                  .emit(RECEIVE_MESSAGE, transformMessageToWritableMap(message));
+      }
+    }
+
+    /**
+     * 接收离线消息事件
+     * @param event
+     */
+    public void onEvent(OfflineMessageEvent event) {
+      Conversation conversation = event.getConversation();
+      List<Message> messageList = event.getOfflineMessageList();
+      WritableMap map = Arguments.createMap();
+      map.putMap("conversation", transformConversationToWritableMap(conversation));
+      map.putArray("messageList", transformListToWritableArray(messageList));
+      Logger.i(TAG, conversation.toString());
+      Logger.i(TAG, messageList.toString());
+      mRAC = getReactApplicationContext();
+      if (mRAC != null) {
+          mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                  .emit(OFFLINE_MESSAGE, map);
       }
     }
     /**
@@ -175,7 +324,7 @@ public class JMessageModule extends ReactContextBaseJavaModule {
       }
       if (mRAC != null) {
           mRAC.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                  .emit(NOTIFICATION_CLICK, transformToWritableMap(message));
+                  .emit(NOTIFICATION_CLICK, transformMessageToWritableMap(message));
       }
     }
 
@@ -199,8 +348,8 @@ public class JMessageModule extends ReactContextBaseJavaModule {
      * @param promise
      */
     @ReactMethod
-    public void sendSingleMessage(String username, String type, String data, final Promise promise) {
-        Conversation conversation = Conversation.createSingleConversation(username);
+    public void sendSingleMessage(String username, String appkey, String type, String data, final Promise promise) {
+        Conversation conversation = Conversation.createSingleConversation(username, appkey);
         MessageContent content;
         sendMessage(conversation, type, data, promise);
     }
@@ -239,6 +388,7 @@ public class JMessageModule extends ReactContextBaseJavaModule {
             @Override
             public void gotResult(int responseCode, String responseDesc) {
                 if (responseCode == 0) {
+
                     promise.resolve(transformToWritableMap(message));
                 } else {
                     promise.reject(String.valueOf(responseCode), responseDesc);
@@ -247,10 +397,90 @@ public class JMessageModule extends ReactContextBaseJavaModule {
         });
         JMessageClient.sendMessage(message);
     }
+    /**
+     * [transformMessageToWritableMap description]
+     * @param  Conversation con       [description]
+     * @return         [description]
+     */
+    private WritableMap transformConversationToWritableMap(Conversation con) {
+      WritableMap info = Arguments.createMap();
+      if (con == null) {
+        return info;
+      }
+      info.putString("targetId", String.valueOf(con.getTargetId()));
+      info.putString("unReadMsgCnt", String.valueOf(con.getUnReadMsgCnt()));
+      info.putMap("lastMsg", transformMessageToWritableMap(con.getLatestMessage()));
+      return info;
+    }
+    /**
+     * [transformMessageToWritableMap description]
+     * @param  Conversation con       [description]
+     * @return         [description]
+     */
+    private WritableArray transformConversationToWritableArray(List<Conversation> conversationList) {
+      WritableArray array = Arguments.createArray();
+      if (conversationList == null) {
+        return array;
+      }
+      for (Conversation conversation : conversationList) {
+        array.pushMap(transformConversationToWritableMap(conversation));
+      }
+      return array;
+    }
+    /**
+     * [transformMessageToWritableMap description]
+     * @param  Message message       [description]
+     * @return         [description]
+     */
+    private WritableMap transformMessageToWritableMap(Message message) {
+      WritableMap info = Arguments.createMap();
+      if (message == null) {
+        return info;
+      }
+      info.putString("msgId", String.valueOf(message.getId()));
+      info.putString("serverMessageId", message.getServerMessageId().toString());
+      info.putString("contentType", message.getContentType().toString());
+      info.putString("fromId", String.valueOf(message.getFromID()));
+      info.putString("createTime", String.valueOf(message.getCreateTime()));
+      info.putString("content", message.getContent().toJson());
+      return info;
+    }
+    /**
+     * [transformListToWritableArray description]
+     * @param  List<Message> messages [description]
+     * @return                [description]
+     */
+    private WritableArray transformListToWritableArray(List<Message> messages) {
+      WritableArray array = Arguments.createArray();
+      if (messages == null) {
+        return array;
+      }
+      for (Message message : messages) {
+        array.pushMap(transformMessageToWritableMap(message));
+      }
+      return array;
+    }
+
+    private WritableArray transformToWritableArray(List<UserInfo> userInfoList) {
+      WritableArray array = Arguments.createArray();
+      if (userInfoList == null) {
+        return array;
+      }
+      for (UserInfo userInfo : userInfoList) {
+        WritableMap info = Arguments.createMap();
+        info.putString("userName", userInfo.getUserName());
+        info.putBoolean("isFriend", userInfo.isFriend());
+        info.putString("nickname", userInfo.getNickname());
+        array.pushMap(info);
+      }
+      return array;
+    }
 
     private WritableMap transformToWritableMap(Message message) {
       WritableMap result = Arguments.createMap();
-      if (message == null) return result;
+      if (message == null) {
+        return result;
+      }
 
       result.putString("msgId", Utils.defaultValue(message.getId(), "").toString());
       result.putString("serverMessageId", Utils.defaultValue(message.getServerMessageId(), "").toString());
